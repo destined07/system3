@@ -1,0 +1,464 @@
+ML Practical 1 - Predict the price of the Uber ride from a given pickup point 
+to the agreed drop-off location. Perform following tasks:
+ 1. Pre-process the dataset. 2. Identify outliers. 3. Check the correlation.
+ 4. Implement linear regression and random forest regression models. 5. Evaluate the models and compare their respective scores like R2, RMSE, etc.
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_squared_error
+
+
+
+df = pd.read_csv("uber.csv")
+
+
+
+df.head()
+
+
+
+df.shape
+
+
+
+df.info()
+
+
+
+df = df.drop(columns=["Unnamed: 0", "key", "pickup_datetime"])
+df = df.dropna()
+
+
+
+df.head()
+
+
+df = df[(df["fare_amount"] > 0) &
+        (df["passenger_count"].between(1, 6)) &
+        (df["pickup_latitude"].between(-90, 90)) &
+        (df["dropoff_latitude"].between(-90, 90)) &
+        (df["pickup_longitude"].between(-180, 180)) &
+        (df["dropoff_longitude"].between(-180, 180))]
+
+
+
+print("Rows before outlier treatment:", len(df))
+
+
+
+# Plot before treatment
+df.plot(kind="box", subplots=True, layout=(7, 2), figsize=(15, 20))
+plt.suptitle("Before Outlier Treatment", fontsize=16)
+plt.tight_layout()
+plt.show()
+
+
+
+
+# Select all numerical columns
+numeric_cols = df.select_dtypes(include=np.number).columns
+
+print("Outliers before treatment:")
+for col in numeric_cols:
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+
+    lower = Q1 - 1.5 * IQR
+    upper = Q3 + 1.5 * IQR
+
+    count = ((df[col] < lower) | (df[col] > upper)).sum()
+    print(col, ":", count)
+# Treat outliers in every numerical column using IQR capping
+for col in numeric_cols:
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+    lower = Q1 - 1.5 * IQR
+    upper = Q3 + 1.5 * IQR
+
+    df[col] = df[col].clip(lower, upper)
+
+print("\nOutliers after treatment:")
+
+for col in numeric_cols:
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+
+    lower = Q1 - 1.5 * IQR
+    upper = Q3 + 1.5 * IQR
+
+    count = ((df[col] < lower) | (df[col] > upper)).sum()
+    print(col, ":", count)
+
+
+
+
+
+# Plot after treatment
+df.plot(kind="box", subplots=True, layout=(7, 2), figsize=(15, 20))
+plt.suptitle("After Outlier Treatment", fontsize=16)
+plt.tight_layout()
+plt.show()
+
+
+
+print("\nRows after outlier treatment:", len(df))
+
+
+
+corr = df.corr()
+corr
+
+
+
+sns.heatmap(df.corr(),annot=True)
+
+
+
+X = df.drop("fare_amount", axis=1)
+y = df["fare_amount"]
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+
+
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+lr_pred = lr.predict(X_test)
+
+
+
+print("\nLinear Regression")
+print("R2 Score:", r2_score(y_test, lr_pred))
+print("RMSE:", np.sqrt(mean_squared_error(y_test, lr_pred)))
+
+
+
+
+rf = RandomForestRegressor(
+    n_estimators=50, random_state=42, n_jobs=-1)
+rf.fit(X_train, y_train)
+rf_pred = rf.predict(X_test)
+
+
+
+print("\nRandom Forest Regression")
+print("R2 Score:", r2_score(y_test, rf_pred))
+print("RMSE:", np.sqrt(mean_squared_error(y_test, rf_pred)))
+
+
+
+
+
+
+==============================================================================
+PRACTICAL 1 : PREDICT THE PRICE OF AN UBER RIDE
+(Linear Regression + Random Forest Regression)
+==============================================================================
+
+PROBLEM STATEMENT
+-----------------
+Predict the fare of an Uber ride from pickup point to drop-off location.
+Tasks: 1. Pre-process the dataset  2. Identify outliers  3. Check correlation
+4. Implement Linear Regression and Random Forest Regression
+5. Evaluate both models and compare R2, RMSE etc.
+
+
+==============================================================================
+PART A : THEORY IN SIMPLE WORDS
+==============================================================================
+* Regression  = predicting a NUMBER (here: fare in dollars).
+* Linear Regression = fits a straight line/plane:  fare = b0 + b1*x1 + b2*x2 ...
+* Random Forest Regression = many decision trees, each trained on a random part
+  of the data; final answer = AVERAGE of all trees' answers.
+* Outlier = a value very far from the others (e.g. fare of 500 dollars for 1 km).
+* IQR method:  IQR = Q3 - Q1.  Lower limit = Q1 - 1.5*IQR, Upper limit = Q3 + 1.5*IQR.
+  Anything outside the limits is an outlier.
+* Correlation = how strongly two columns move together (-1 to +1).
+* R2 score = how much of the variation in fare the model explains (1 = perfect,
+  0 = as bad as predicting the mean).
+* RMSE = Root Mean Squared Error = average size of the prediction error, in the
+  same unit as fare (dollars). Lower is better.
+
+
+==============================================================================
+PART B : ALGORITHM (STEP BY STEP)
+==============================================================================
+1. Import libraries (pandas, numpy, matplotlib, seaborn, sklearn).
+2. Load uber.csv into a DataFrame.
+3. Explore data: head(), shape, info().
+4. Drop useless columns (Unnamed: 0, key, pickup_datetime).
+5. Remove rows with missing values (dropna).
+6. Remove invalid rows:
+      fare > 0, passengers between 1 and 6,
+      latitudes between -90 and 90, longitudes between -180 and 180.
+7. Draw box plots to SEE outliers.
+8. For every numeric column:
+      compute Q1, Q3, IQR, lower limit, upper limit -> count outliers.
+9. Treat outliers by CAPPING (clip) values to the lower/upper limits.
+10. Re-count outliers and re-draw box plots to confirm the treatment.
+11. Compute correlation matrix and draw heat map.
+12. Split into X (features) and y (fare_amount).
+13. Split into train (80%) and test (20%).
+14. Train Linear Regression on train data; predict on test data.
+15. Train Random Forest (50 trees) on train data; predict on test data.
+16. Calculate R2 and RMSE for both models and compare.
+17. The model with HIGHER R2 and LOWER RMSE is better (usually Random Forest).
+
+
+==============================================================================
+PART C : LINE-BY-LINE CODE EXPLANATION
+==============================================================================
+
+---- Imports ----
+import pandas as pd
+   -> pandas: used to read CSV and work with tables (DataFrames).
+import numpy as np
+   -> numpy: numeric operations (sqrt, number types).
+import matplotlib.pyplot as plt
+   -> matplotlib: draws graphs.
+import seaborn as sns
+   -> seaborn: prettier graphs, used here for the heat map.
+
+from sklearn.model_selection import train_test_split
+   -> function that splits data into training and testing parts.
+from sklearn.linear_model import LinearRegression
+   -> the Linear Regression model class.
+from sklearn.ensemble import RandomForestRegressor
+   -> the Random Forest Regression model class.
+from sklearn.metrics import r2_score, mean_squared_error
+   -> functions to measure model quality.
+
+---- Load data ----
+df = pd.read_csv("uber.csv")
+   -> reads the file into a DataFrame called df.
+df.head()
+   -> shows first 5 rows (quick look at the data).
+df.shape
+   -> (rows, columns) of the data.
+df.info()
+   -> shows column names, data types, and non-null counts (helps find missing values).
+
+---- Preprocessing ----
+df = df.drop(columns=["Unnamed: 0", "key", "pickup_datetime"])
+   -> removes columns that do not help prediction (index, unique id, raw date text).
+df = df.dropna()
+   -> deletes any row that has a missing value (NaN).
+df.head()
+   -> check the result.
+
+df = df[(df["fare_amount"] > 0) &
+        (df["passenger_count"].between(1, 6)) &
+        (df["pickup_latitude"].between(-90, 90)) &
+        (df["dropoff_latitude"].between(-90, 90)) &
+        (df["pickup_longitude"].between(-180, 180)) &
+        (df["dropoff_longitude"].between(-180, 180))]
+   -> keeps ONLY valid rows. Fare must be positive, passengers 1-6, and
+      latitude/longitude must be real earth coordinates. '&' means AND.
+      Rows that break any rule are dropped (this is data cleaning).
+
+print("Rows before outlier treatment:", len(df))
+   -> prints how many rows remain before outlier handling.
+
+---- Outlier detection (visual) ----
+df.plot(kind="box", subplots=True, layout=(7, 2), figsize=(15, 20))
+   -> draws a box plot for EVERY column in a 7x2 grid. Dots outside whiskers
+      are outliers.
+plt.suptitle("Before Outlier Treatment", fontsize=16)
+   -> main heading for the whole figure.
+plt.tight_layout()
+   -> adjusts spacing so plots do not overlap.
+plt.show()
+   -> displays the figure.
+
+---- Outlier detection (numeric) ----
+numeric_cols = df.select_dtypes(include=np.number).columns
+   -> picks only the numeric columns.
+print("Outliers before treatment:")
+for col in numeric_cols:
+   -> loop through each numeric column.
+    Q1 = df[col].quantile(0.25)
+       -> 25th percentile (first quartile).
+    Q3 = df[col].quantile(0.75)
+       -> 75th percentile (third quartile).
+    IQR = Q3 - Q1
+       -> spread of the middle 50% of data.
+    lower = Q1 - 1.5 * IQR
+    upper = Q3 + 1.5 * IQR
+       -> acceptable range. Outside = outlier.
+    count = ((df[col] < lower) | (df[col] > upper)).sum()
+       -> '|' means OR. Counts True values = number of outliers.
+    print(col, ":", count)
+       -> prints column name and its outlier count.
+
+---- Outlier treatment ----
+for col in numeric_cols:
+    (same Q1, Q3, IQR, lower, upper calculation)
+    df[col] = df[col].clip(lower, upper)
+       -> CAPPING (winsorizing): values below lower become lower, values above
+         upper become upper. Rows are NOT deleted, only extreme values are limited.
+
+The next loop repeats the counting code to show outliers AFTER treatment
+(should be 0 or almost 0). Again box plots are drawn with the title
+"After Outlier Treatment", and len(df) shows rows are unchanged.
+
+---- Correlation ----
+corr = df.corr()
+   -> table of correlation between every pair of columns.
+corr
+   -> displays the table.
+sns.heatmap(df.corr(), annot=True)
+   -> colored grid; annot=True writes the number in each cell.
+      Look at the fare_amount row: it should correlate positively with
+      distance-related columns (coordinates).
+
+---- Split data ----
+X = df.drop("fare_amount", axis=1)
+   -> X = all columns except the target (these are inputs/features).
+y = df["fare_amount"]
+   -> y = target (what we want to predict).
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+   -> 80% for training, 20% for testing. random_state=42 makes the split the
+      same every run (reproducible).
+
+---- Linear Regression ----
+lr = LinearRegression()
+   -> create the model object.
+lr.fit(X_train, y_train)
+   -> TRAIN: finds the best coefficients on training data.
+lr_pred = lr.predict(X_test)
+   -> predicts fares for unseen test data.
+print("R2 Score:", r2_score(y_test, lr_pred))
+   -> compares real fares (y_test) with predicted ones.
+print("RMSE:", np.sqrt(mean_squared_error(y_test, lr_pred)))
+   -> mean_squared_error gives MSE; sqrt gives RMSE.
+
+---- Random Forest ----
+rf = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)
+   -> n_estimators=50 : build 50 trees.
+      random_state=42 : same result every run.
+      n_jobs=-1       : use all CPU cores (faster).
+rf.fit(X_train, y_train)
+   -> train all trees.
+rf_pred = rf.predict(X_test)
+   -> average prediction of 50 trees.
+print R2 and RMSE as above.
+
+---- Comparison ----
+Compare the two printed R2/RMSE pairs. Random Forest normally gives higher R2
+and lower RMSE because fare depends NON-linearly on coordinates (a straight
+line cannot capture this well).
+
+NOTE (good to mention in viva): Clipping latitude/longitude with IQR is a
+simple approach; a better feature would be the real DISTANCE between pickup and
+drop (Haversine formula). Adding it would improve both models greatly.
+
+
+==============================================================================
+PART D : EXPECTED VIVA QUESTIONS AND ANSWERS
+==============================================================================
+
+Q1. What is regression?
+A. Supervised learning technique that predicts a continuous numeric value.
+
+Q2. Why did you drop 'Unnamed: 0', 'key', 'pickup_datetime'?
+A. The first two are just ids (no predictive meaning). pickup_datetime is raw
+   text; to use it we would need to extract hour/day/month features.
+
+Q3. What is an outlier? Why remove or treat it?
+A. A value far from the rest of the data. It can pull the regression line
+   toward it and increase error, so we treat it.
+
+Q4. Explain the IQR method.
+A. IQR = Q3 - Q1. Values below Q1 - 1.5*IQR or above Q3 + 1.5*IQR are outliers.
+
+Q5. Difference between removing and capping outliers?
+A. Removing deletes rows (data loss). Capping keeps rows but limits extreme
+   values to the boundary.
+
+Q6. What does a box plot show?
+A. Median, Q1, Q3, whiskers, and outliers as separate dots.
+
+Q7. What is correlation? Range?
+A. Strength of linear relation between two variables. Range -1 to +1.
+   +1 = perfect positive, -1 = perfect negative, 0 = no linear relation.
+
+Q8. Does correlation imply causation?
+A. No.
+
+Q9. What is multicollinearity?
+A. When two input features are highly correlated with each other; it makes
+   Linear Regression coefficients unstable.
+
+Q10. Why train_test_split?
+A. To test the model on data it has not seen, giving an honest performance
+    estimate and detecting overfitting.
+
+Q11. What does random_state do?
+A. Fixes the random seed so the split/results are repeatable.
+
+Q12. Explain Linear Regression.
+A. Fits the line y = b0 + b1x1 + ... by minimizing the sum of squared errors
+   (least squares).
+
+Q13. Assumptions of Linear Regression?
+A. Linearity, independence of errors, constant variance (homoscedasticity),
+   normally distributed errors, no multicollinearity.
+
+Q14. Explain Random Forest.
+A. Ensemble of many decision trees trained on random samples (bagging) and
+   random feature subsets; for regression the output is the average of trees.
+
+Q15. Why is Random Forest usually better here?
+A. It captures non-linear relationships and is less affected by outliers and
+   overfitting than a single tree.
+
+Q16. What is n_estimators?
+A. Number of trees in the forest. More trees = more stable but slower.
+
+Q17. What is R2 score? Formula?
+A. R2 = 1 - (SS_residual / SS_total). Fraction of variance explained by model.
+
+Q18. What is RMSE? Why use sqrt?
+A. sqrt of mean of squared errors. Square root brings the error back to the
+   original unit (dollars).
+
+Q19. Difference between MAE, MSE, RMSE?
+A. MAE = mean of absolute errors; MSE = mean of squared errors (punishes big
+   errors more); RMSE = sqrt(MSE).
+
+Q20. Can R2 be negative?
+A. Yes, if the model is worse than simply predicting the mean.
+
+Q21. What is overfitting?
+A. Model learns the training data (even noise) too well and performs poorly
+   on test data. Random Forest can overfit if trees are too deep.
+
+Q22. Is feature scaling needed here?
+A. Not for Random Forest. For plain Linear Regression it is not required for
+   accuracy, but helps comparing coefficients.
+
+Q23. How can you improve the models?
+A. Compute Haversine distance, extract hour/day/month from pickup_datetime,
+   tune hyperparameters, use cross-validation, try Gradient Boosting.
+
+Q24. What does axis=1 mean in drop()?
+A. axis=1 = drop columns; axis=0 = drop rows.
+
+Q25. What does dropna() do?
+A. Removes rows with missing values.
+
+Q26. Supervised or unsupervised?
+A. Supervised, because the target (fare) is known in the training data.

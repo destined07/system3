@@ -1,0 +1,374 @@
+==============================================================================
+PRACTICAL 3 : BANK CUSTOMER CHURN PREDICTION USING A NEURAL NETWORK (KERAS)
+==============================================================================
+
+PROBLEM STATEMENT
+-----------------
+Given a bank customer, build a neural-network classifier that can determine
+whether the customer will leave (churn) the bank within the next 6 months.
+Dataset: Churn_Modelling.csv (Kaggle) - 10,000 rows, 14 columns.
+Steps: 1. Read dataset  2. Separate features/target and split train/test
+3. Normalize  4. Build the model, identify improvements and implement them
+5. Print accuracy score and confusion matrix.
+
+# Practical 3 - Bank Customer Churn Prediction using ANN
+
+import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+# Step 1: Load dataset
+data = pd.read_csv("Churn_Modelling.csv")
+
+# Step 2: Remove unnecessary columns
+data = data.drop(['RowNumber', 'CustomerId', 'Surname'], axis=1)
+
+# Step 3: Convert categorical data into numbers
+data = pd.get_dummies(data, columns=['Gender', 'Geography'], drop_first=True, dtype=int)
+
+# Step 4: Separate features and target
+X = data.drop('Exited', axis=1)
+y = data['Exited']
+
+# Step 5: Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Step 6: Normalize data
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# Step 7: Build ANN model
+model = Sequential([
+    Dense(16, activation='relu', input_shape=(X_train.shape[1],)),
+    Dense(8, activation='relu'),
+    Dense(1, activation='sigmoid')
+])
+
+# Step 8: Compile model
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+# Step 9: Train model
+model.fit(X_train, y_train, epochs=10, batch_size=32, validation_split=0.2)
+
+# Step 10: Predict
+pred = (model.predict(X_test) > 0.5).astype(int).ravel()
+
+# Step 11: Evaluate model
+print("Accuracy:", accuracy_score(y_test, pred))
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, pred))
+
+##############################################################################
+PART 2 : THEORY IN SIMPLE WORDS
+##############################################################################
+* Churn = customer leaving. Target column 'Exited': 1 = left, 0 = stayed.
+* ANN (Artificial Neural Network) = layers of "neurons". Each neuron takes
+  inputs, multiplies by weights, adds a bias, and passes the result through an
+  activation function.
+* Layers:  Input layer (11 features) -> Hidden layer 1 (6 neurons, ReLU)
+           -> Hidden layer 2 (6 neurons, ReLU) -> Output layer (1 neuron, Sigmoid).
+* ReLU activation: f(x) = max(0, x). Fast, avoids vanishing gradient.
+* Sigmoid activation: f(x) = 1 / (1 + e^-x). Output between 0 and 1 = probability
+  of churn.
+* Loss = binary_crossentropy (used for two-class problems).
+* Optimizer = Adam (adaptive gradient descent; adjusts weights to reduce loss).
+* Epoch = one full pass over the training data.
+  Batch size = number of samples used before each weight update.
+* Dummy (one-hot) encoding: converts text categories (France/Germany/Spain)
+  into 0/1 columns because neural networks need numbers.
+* Normalization (StandardScaler): makes every feature mean 0 and std 1, so large
+  values (Balance ~ 100000) do not dominate small ones (Tenure ~ 5).
+
+
+##############################################################################
+PART 3 : ALGORITHM
+##############################################################################
+1. Import pandas, numpy, seaborn, matplotlib.                      (Cell 1)
+2. Read Churn_Modelling.csv.                                       (Cell 2)
+3. Explore: head, shape, describe, isnull().sum(), info, dtypes,
+   columns.                                                        (Cells 3-10)
+4. Drop useless columns: RowNumber, Surname, CustomerId.           (Cell 11)
+5. Visualize churn versus Tenure and Age (histograms).             (Cells 13-17)
+6. Encode categorical columns:                                     (Cells 18-19)
+      Gender    -> dummy column 'Male' (drop_first=True)
+      Geography -> dummy columns 'Germany', 'Spain' (France is the base class)
+7. Create X (11 input features) and y (Exited).                    (Cells 21-22)
+8. Split into 70% train and 30% test.                              (Cell 23)
+9. Standardize: fit on train, transform train and test.            (Cells 24-25)
+10. Build the Keras Sequential model:                              (Cells 28-33)
+       Dense(6, relu, input_dim=11) -> Dense(6, relu) -> Dense(1, sigmoid).
+11. Compile with optimizer=adam, loss=binary_crossentropy,
+    metrics=accuracy.                                              (Cell 34)
+12. Train: fit(X_train, y_train, batch_size=10, epochs=50).        (Cell 36)
+     For each epoch: forward pass -> compute loss -> back-propagation ->
+     update weights with Adam.
+13. Predict on X_test -> probabilities; convert to class using
+    threshold 0.5.                                                 (Cell 37)
+14. Print confusion matrix, accuracy, heat map, classification
+    report.                                                        (Cells 38-44)
+15. Identify improvements and implement them (see Part 6).
+
+
+##############################################################################
+PART 4 : LINE-BY-LINE CODE EXPLANATION (BY CELL)
+##############################################################################
+
+CELL 1
+  import pandas as pd        -> data handling (tables / DataFrames).
+  import numpy as np         -> numeric operations.
+  import seaborn as sns      -> heat map plotting.
+  import matplotlib.pyplot as plt -> graphs.
+
+CELL 2
+  df = pd.read_csv("Churn_Modelling.csv") -> loads the dataset into df.
+
+CELLS 3 to 10 (data exploration)
+  df.head()          -> first 5 rows.
+  df.shape           -> (10000, 14) = rows, columns.
+  df.describe()      -> count, mean, std, min, quartiles, max of numeric columns.
+  df.isnull()        -> True/False table showing missing values.
+  df.isnull().sum()  -> missing values per column (all 0, so no cleaning needed).
+  df.info()          -> data types and non-null counts.
+  df.dtypes          -> data type of each column.
+  df.columns         -> list of column names.
+
+CELL 11
+  df.drop([...], axis=1) -> removes RowNumber, Surname, CustomerId. They are
+  only identifiers and give no predictive information. axis=1 means columns.
+
+CELL 13 (function)
+  def visualization(x, y, xlabel):
+      plt.figure(figsize=(10,5))   -> new figure of 10x5 inches.
+      plt.hist([x, y], color=['red','green'], label=['exit','not_exit'])
+          -> two histograms together: red = left, green = stayed.
+      plt.xlabel(xlabel, fontsize=20); plt.ylabel("No. of customers", ...)
+          -> axis labels.
+      plt.legend()                 -> legend box.
+
+CELL 14
+  df[df['Exited']==1]['Tenure'] -> Tenure of customers who LEFT.
+  df[df['Exited']==0]['Tenure'] -> Tenure of customers who STAYED.
+
+CELL 15 -> calls the function to plot churn versus Tenure.
+CELLS 16-17 -> same for Age (older customers show more churn).
+
+CELL 18
+  X = df[[...]]  -> a temporary X that still has text 'Gender'. It is
+                    redefined in Cell 21, so this line is not needed.
+  states = pd.get_dummies(df['Geography'], drop_first=True)
+      -> creates 0/1 columns Germany and Spain. drop_first=True removes
+         'France' to avoid the dummy variable trap (redundant column).
+  gender = pd.get_dummies(df['Gender'], drop_first=True)
+      -> creates one column 'Male' (1 = Male, 0 = Female).
+
+CELL 19
+  pd.concat([df, gender, states], axis=1) -> joins the new columns side by side.
+
+CELL 20 -> df.head() shows the new columns Male, Germany, Spain.
+
+CELL 21
+  X = df[[...11 columns...]] -> final 11 numeric input features.
+CELL 22
+  y = df['Exited'] -> target (0 or 1).
+
+CELL 23
+  train_test_split(X, y, test_size=0.30) -> 70% (7000) train, 30% (3000) test.
+  No random_state is set, so the split changes on every run (use
+  random_state=42 for repeatable results).
+
+CELLS 24-25 (normalization)
+  sc = StandardScaler()          -> creates the scaler.
+  sc.fit_transform(X_train)      -> learns mean/std from train and scales it.
+  sc.transform(X_test)           -> scales test with the SAME mean/std
+                                    (avoids data leakage).
+CELLS 26-27 -> display the scaled arrays.
+
+CELLS 28-29
+  import keras -> Keras is a simple high-level API on top of TensorFlow.
+  Sequential   -> model made of stacked layers.
+  Dense        -> fully connected layer.
+
+CELL 30
+  classifier = Sequential() -> empty model.
+
+CELL 31 (hidden layer 1)
+  Dense(activation="relu", input_dim=11, units=6, kernel_initializer="uniform")
+      units=6       -> 6 neurons.
+      input_dim=11  -> 11 input features.
+      relu          -> activation max(0,x).
+      uniform       -> initial weights are small random numbers (uniform
+                       distribution).
+      Parameters = 11*6 weights + 6 biases = 72.
+
+CELL 32 (hidden layer 2)
+  Dense(activation="relu", units=6, ...) -> Parameters = 6*6 + 6 = 42.
+
+CELL 33 (output layer)
+  Dense(activation="sigmoid", units=1, ...) -> 1 neuron giving the probability
+  of churn. Parameters = 6 + 1 = 7.   TOTAL = 72 + 42 + 7 = 121.
+
+CELL 34
+  compile(optimizer="adam", loss='binary_crossentropy', metrics=['accuracy'])
+      adam = optimizer that updates weights;
+      binary_crossentropy = loss for two classes;
+      accuracy = metric shown during training.
+
+CELL 35 -> summary() prints layers, output shapes and parameter counts.
+
+CELL 36
+  fit(X_train, y_train, batch_size=10, epochs=50)
+      7000 samples / batch size 10 = 700 steps per epoch, repeated 50 times.
+      Loss falls from about 0.43 to 0.39 and accuracy rises to about 0.837.
+
+CELL 37
+  y_pred = classifier.predict(X_test) -> probabilities between 0 and 1.
+  y_pred = (y_pred > 0.5)              -> True (will leave) / False (will stay).
+
+CELL 38 -> imports evaluation functions.
+CELLS 39-40
+  cm = confusion_matrix(y_test, y_pred) -> your result [[2328, 72], [425, 175]]
+      TN = 2328 (stayed, predicted stayed)
+      FP = 72   (stayed, predicted left)
+      FN = 425  (left, predicted stayed)
+      TP = 175  (left, predicted left)
+CELLS 41-42
+  accuracy_score -> (2328 + 175) / 3000 = 0.8343 (about 83.4%).
+CELL 43
+  sns.heatmap(cm, annot=True) -> confusion matrix as a colored grid;
+  xlabel 'Predicted', ylabel 'Truth'.
+CELL 44
+  classification_report -> precision/recall/f1 per class:
+      Class 0: precision 0.85, recall 0.97
+      Class 1: precision 0.71, recall 0.29  <- the model misses most churners.
+
+
+##############################################################################
+PART 5 : EXPECTED VIVA QUESTIONS AND ANSWERS
+##############################################################################
+
+Q1. What is a neural network?
+A. A model made of layers of connected neurons that learns weights from data.
+
+Q2. What is a neuron?
+A. It computes a weighted sum of inputs + bias, then applies an activation
+   function.
+
+Q3. Why do we need activation functions?
+A. They add non-linearity so the network can learn complex patterns.
+
+Q4. ReLU vs Sigmoid?
+A. ReLU = max(0,x), used in hidden layers (fast). Sigmoid squashes to (0,1),
+   used in the output layer for binary classification.
+
+Q5. Why only 1 neuron in the output layer?
+A. It is a binary problem; one probability P(churn) is enough.
+
+Q6. What is binary cross-entropy?
+A. Loss = -[y log(p) + (1-y) log(1-p)]; it penalizes confident wrong
+   predictions heavily.
+
+Q7. What is Adam?
+A. An optimizer combining momentum and adaptive learning rates; fast and
+   reliable.
+
+Q8. What are epoch, batch size, iteration?
+A. Epoch = one pass over all data. Batch size = samples per weight update.
+   Iterations per epoch = samples / batch size (7000/10 = 700).
+
+Q9. What is back-propagation?
+A. It computes the gradient of the loss with respect to every weight (chain
+   rule) and sends the error backwards to update the weights.
+
+Q10. Why drop RowNumber, CustomerId, Surname?
+A. They are identifiers with no relation to churn and only add noise.
+
+Q11. Why get_dummies and drop_first=True?
+A. Neural networks need numbers. drop_first avoids the dummy variable trap
+   (perfect multicollinearity).
+
+Q12. Why normalize the data?
+A. Features have very different ranges; scaling makes training faster and
+   stable.
+
+Q13. Why fit_transform on train but only transform on test?
+A. To prevent data leakage from the test set.
+
+Q14. How many parameters does your model have?
+A. 121 (72 + 42 + 7).
+
+Q15. What does kernel_initializer mean?
+A. How the initial weights are set (uniform random here).
+
+Q16. What is the 0.5 threshold?
+A. Probability above 0.5 is classified as churn (1), otherwise not churn (0).
+
+Q17. Explain your confusion matrix and accuracy.
+A. TN=2328, FP=72, FN=425, TP=175; accuracy = 83.4%.
+
+Q18. Is 83% accuracy good? Any problem?
+A. The data is imbalanced (about 80% stayed / 20% left). A model that always
+   predicts "stay" already gets about 80%. Recall for churners is only 0.29, so
+   accuracy alone is misleading.
+
+Q19. What is class imbalance and how do you handle it?
+A. One class has far fewer samples. Handle with SMOTE/oversampling,
+   undersampling, class_weight in fit(), or a lower decision threshold.
+
+Q20. What is overfitting? How to detect and prevent it?
+A. Very good training accuracy but poor test accuracy. Detect using a
+   validation split; prevent with Dropout, early stopping, regularization, more
+   data.
+
+Q21. How can this model be improved? (Step 4 of the problem)
+A. See Part 6.
+
+Q22. Why look at precision and recall of the churn class?
+A. Missing a churner (FN) costs the bank a customer, so recall of class 1
+   matters a lot.
+
+Q23. What is a hidden layer? How many should be used?
+A. Layers between input and output. Chosen by experiment; more layers/neurons
+   = more capacity but higher overfitting risk.
+
+Q24. Why Keras and not TensorFlow directly?
+A. Keras is a simple wrapper over TensorFlow: shorter code and clearer errors.
+
+Q25. What does Sequential mean?
+A. Layers are stacked in a straight line; the output of one feeds the next.
+
+Q26. What is the difference between ML and ANN?
+A. ANN is one type of ML model that learns through layered weights; other ML
+   models (SVM, decision trees) have different structures.
+
+
+##############################################################################
+PART 6 : POINTS OF IMPROVEMENT (STEP 4) WITH CODE
+##############################################################################
+1. Handle class imbalance (biggest gain in recall):
+      classifier.fit(X_train, y_train, batch_size=32, epochs=100,
+                     class_weight={0:1, 1:4})
+2. Add more neurons / layers, e.g. Dense(16) -> Dense(8) -> Dense(1).
+3. Add Dropout to reduce overfitting:
+      from keras.layers import Dropout
+      classifier.add(Dropout(0.2))
+4. Use validation split and early stopping:
+      from keras.callbacks import EarlyStopping
+      es = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+      classifier.fit(X_train, y_train, validation_split=0.2, epochs=100,
+                     batch_size=32, callbacks=[es])
+5. Tune the threshold (e.g. 0.35 instead of 0.5) to catch more churners.
+6. Set random_state=42 in train_test_split for reproducible results.
+7. Tune hyperparameters (learning rate, batch size, neurons) and compare with
+   Random Forest / XGBoost.
+Mention in viva: after improvements, recall and F1 of the churn class increase,
+even if overall accuracy changes only slightly.

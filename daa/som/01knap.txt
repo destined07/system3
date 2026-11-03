@@ -1,0 +1,56 @@
+n = 0
+mxwg = 0
+
+
+def solve(idx, rem_wg, dp, v):
+    if idx == n:
+        return 0
+
+    if dp[idx][rem_wg] != -1:
+        return dp[idx][rem_wg]
+
+    ans = 0
+
+    curr_wg = v[idx][0]
+    curr_price = v[idx][1]
+
+    if rem_wg >= curr_wg:
+        ans = max(ans, curr_price + solve(idx + 1, rem_wg - curr_wg, dp, v))
+
+    ans = max(ans, solve(idx + 1, rem_wg, dp, v))
+
+    dp[idx][rem_wg] = ans
+
+    return dp[idx][rem_wg]
+
+
+def iterative_2D(v):
+    dp = [[0 for j in range(mxwg + 1)] for i in range(n + 1)]
+
+    for idx in range(n - 1, -1, -1):
+        for rem_wg in range(mxwg + 1):
+
+            ans = dp[idx + 1][rem_wg]
+
+            if rem_wg >= v[idx][0]:
+                ans = max(ans, v[idx][1] + dp[idx + 1][rem_wg - v[idx][0]])
+
+            dp[idx][rem_wg] = ans
+
+    return dp[0][mxwg]
+
+
+n, mxwg = map(int, input().split())
+
+v = []
+
+for i in range(n):
+    wg, price = map(int, input().split())
+    v.append((wg, price))
+
+
+dp = [[-1 for j in range(mxwg + 1)] for i in range(n)]
+
+print("Memoization:", solve(0, mxwg, dp, v))
+
+print("Iterative 2D:", iterative_2D(v))

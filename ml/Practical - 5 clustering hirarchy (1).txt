@@ -1,0 +1,350 @@
+//Practical - 5 :
+//Implement K-Means clustering/ hierarchical clustering on sales_data_sample.csv dataset.
+ //Determine the number of clusters using the elbow method.
+
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from scipy.cluster.hierarchy import dendrogram, linkage
+
+
+
+# 1. Load dataset
+df = pd.read_csv("sales_data_sample.csv", encoding="ISO-8859-1")
+
+
+
+df.head()
+
+
+
+df.shape
+
+
+# 2. Select numerical columns
+X = df[["QUANTITYORDERED", "PRICEEACH", "SALES"]]
+
+
+
+# 3. Normalize data
+sc = StandardScaler()
+X_scaled = sc.fit_transform(X)
+
+
+
+# 4. Elbow Method
+wcss = []
+for i in range(1, 11):
+    km = KMeans(n_clusters=i, random_state=42, n_init=10)
+    km.fit(X_scaled)
+    wcss.append(km.inertia_)
+
+
+
+# Plot Elbow graph
+plt.plot(range(1, 11), wcss, marker="o")
+plt.xlabel("Number of Clusters")
+plt.ylabel("WCSS")
+plt.title("Elbow Method")
+plt.grid()
+plt.show()
+
+
+
+# 5. K-Means Clustering
+km = KMeans(n_clusters=3, random_state=42, n_init=10)
+df["KMeans_Cluster"] = km.fit_predict(X_scaled)
+
+
+
+print("\nK-Means Clustering:")
+print(df["KMeans_Cluster"].value_counts())
+
+
+# 6. Hierarchical Clustering
+hc = AgglomerativeClustering(n_clusters=3)
+df["Hierarchical_Cluster"] = hc.fit_predict(X_scaled)
+
+
+print("\nHierarchical Clustering:")
+print(df["Hierarchical_Cluster"].value_counts())
+
+
+
+# 7. Visualize K-Means Clusters
+plt.scatter(X_scaled[:, 0], X_scaled[:, 2],
+            c=df["KMeans_Cluster"], cmap="rainbow")
+plt.xlabel("Quantity Ordered")
+plt.ylabel("Sales")
+plt.title("K-Means Clustering")
+plt.show()
+
+
+# 8. Dendrogram
+linked = linkage(X_scaled[:100], method="ward")
+
+plt.figure(figsize=(10, 5))
+dendrogram(linked)
+plt.title("Hierarchical Clustering Dendrogram")
+plt.xlabel("Data Points")
+plt.ylabel("Distance")
+plt.show()
+
+
+
+
+
+
+==============================================================================
+PRACTICAL 5 : K-MEANS AND HIERARCHICAL CLUSTERING (ELBOW METHOD)
+==============================================================================
+
+PROBLEM STATEMENT
+-----------------
+Implement K-Means clustering / hierarchical clustering on
+sales_data_sample.csv. Determine the number of clusters using the elbow method.
+
+
+==============================================================================
+PART A : THEORY IN SIMPLE WORDS
+==============================================================================
+* Clustering = UNSUPERVISED learning: grouping similar data points together
+  without any labels.
+* K-Means: you choose K (number of clusters). The algorithm creates K centres
+  (centroids), assigns every point to its nearest centroid, moves each
+  centroid to the mean of its points, and repeats until nothing changes.
+* WCSS (Within-Cluster Sum of Squares) = sum of squared distances of points
+  from their own cluster centre. In sklearn it is called 'inertia_'.
+  Lower WCSS = tighter clusters.
+* Elbow method: run K-Means for K = 1..10, plot WCSS versus K. WCSS always
+  falls as K increases; the K where the curve bends like an elbow (decrease
+  slows down sharply) is the best K.
+* Hierarchical (Agglomerative) clustering: start with every point as its own
+  cluster, repeatedly MERGE the two closest clusters until one cluster remains.
+  The merge history is shown as a DENDROGRAM (tree diagram).
+* Ward linkage = merges the clusters that cause the smallest increase in
+  variance.
+* Scaling is important because clustering uses distances.
+  Columns used: QUANTITYORDERED, PRICEEACH, SALES.
+
+
+==============================================================================
+PART B : ALGORITHM
+==============================================================================
+Preparation
+1. Import libraries.
+2. Load sales_data_sample.csv with encoding ISO-8859-1 (the file has special
+   characters that fail with default UTF-8).
+3. Select numeric columns: QUANTITYORDERED, PRICEEACH, SALES.
+4. Standardize them (mean 0, std 1).
+
+Elbow method
+5. For K = 1 to 10: run K-Means, store inertia (WCSS).
+6. Plot K versus WCSS; choose the K at the elbow (here K = 3).
+
+K-Means algorithm (K = 3)
+1. Choose 3 initial centroids (k-means++ picks them smartly).
+2. Assign each point to the nearest centroid (Euclidean distance).
+3. Recompute each centroid as the mean of its assigned points.
+4. Repeat steps 2-3 until assignments stop changing (convergence).
+
+Hierarchical (Agglomerative) algorithm
+1. Treat each point as a separate cluster.
+2. Compute distances between all clusters (Ward linkage).
+3. Merge the two closest clusters.
+4. Repeat until only the required number (3) of clusters remain
+   (or until one cluster for the dendrogram).
+
+Finally: add cluster labels to the DataFrame, count points per cluster,
+draw the scatter plot of clusters, and draw the dendrogram.
+
+
+==============================================================================
+PART C : LINE-BY-LINE CODE EXPLANATION
+==============================================================================
+
+import pandas as pd
+   -> read CSV and handle tables.
+import matplotlib.pyplot as plt
+   -> plots.
+from sklearn.preprocessing import StandardScaler
+   -> scaling.
+from sklearn.cluster import KMeans, AgglomerativeClustering
+   -> K-Means and hierarchical clustering classes.
+from scipy.cluster.hierarchy import dendrogram, linkage
+   -> linkage computes the merge tree; dendrogram draws it.
+
+# 1. Load dataset
+df = pd.read_csv("sales_data_sample.csv", encoding="ISO-8859-1")
+   -> loads file; ISO-8859-1 encoding avoids UnicodeDecodeError.
+df.head()  -> first 5 rows.
+df.shape   -> number of rows and columns.
+
+# 2. Select numerical columns
+X = df[["QUANTITYORDERED", "PRICEEACH", "SALES"]]
+   -> only these three numeric columns are used for clustering.
+
+# 3. Normalize
+sc = StandardScaler()
+X_scaled = sc.fit_transform(X)
+   -> every column gets mean 0, std 1, so SALES (large values) does not
+      dominate QUANTITYORDERED or PRICEEACH.
+
+# 4. Elbow Method
+wcss = []
+   -> empty list to hold WCSS for each K.
+for i in range(1, 11):
+   -> try K = 1, 2, ..., 10.
+    km = KMeans(n_clusters=i, random_state=42, n_init=10)
+       -> n_clusters = K; random_state=42 for repeatable result;
+          n_init=10 = run the algorithm 10 times with different starting
+          centroids and keep the best.
+    km.fit(X_scaled)
+       -> perform clustering.
+    wcss.append(km.inertia_)
+       -> inertia_ = WCSS of this clustering; store it.
+
+plt.plot(range(1, 11), wcss, marker="o")
+   -> line graph of K versus WCSS with circle markers.
+plt.xlabel("Number of Clusters"); plt.ylabel("WCSS"); plt.title("Elbow Method")
+plt.grid(); plt.show()
+   -> labels, grid, display. Look for the bend (elbow) - around K = 3.
+
+# 5. K-Means Clustering
+km = KMeans(n_clusters=3, random_state=42, n_init=10)
+   -> final model with the chosen K = 3.
+df["KMeans_Cluster"] = km.fit_predict(X_scaled)
+   -> fit_predict trains and returns cluster label (0, 1, 2) for every row;
+      stored as a new column.
+print(df["KMeans_Cluster"].value_counts())
+   -> number of records in each cluster.
+
+# 6. Hierarchical Clustering
+hc = AgglomerativeClustering(n_clusters=3)
+   -> bottom-up clustering stopping at 3 clusters (default linkage = ward,
+      default distance = Euclidean).
+df["Hierarchical_Cluster"] = hc.fit_predict(X_scaled)
+   -> cluster labels saved as a new column.
+print(df["Hierarchical_Cluster"].value_counts())
+   -> size of each hierarchical cluster.
+
+# 7. Visualize K-Means Clusters
+plt.scatter(X_scaled[:, 0], X_scaled[:, 2], c=df["KMeans_Cluster"], cmap="rainbow")
+   -> scatter plot: x-axis = column 0 (QUANTITYORDERED scaled),
+      y-axis = column 2 (SALES scaled); colour = cluster label.
+plt.xlabel("Quantity Ordered"); plt.ylabel("Sales"); plt.title("K-Means Clustering")
+plt.show()
+
+# 8. Dendrogram
+linked = linkage(X_scaled[:100], method="ward")
+   -> computes the hierarchical merge tree using Ward linkage on only the
+      first 100 rows (the full dataset of about 2800 rows would make an
+      unreadable tree and be slow).
+plt.figure(figsize=(10, 5))
+dendrogram(linked)
+   -> draws the tree: x-axis = data points, y-axis = distance at which
+      clusters merge. Cutting the tree horizontally at a height gives the
+      clusters; the longest vertical lines without crossing suggest the best
+      number of clusters.
+plt.title(...); plt.xlabel("Data Points"); plt.ylabel("Distance"); plt.show()
+
+NOTE for viva: K = 3 is written directly in the code; it should be the value
+you read from the elbow graph. The dendrogram uses only 100 rows, so it is a
+sample view, not the full result.
+
+
+==============================================================================
+PART D : EXPECTED VIVA QUESTIONS AND ANSWERS
+==============================================================================
+
+Q1. What is clustering? Supervised or unsupervised?
+A. Grouping similar data points; it is UNSUPERVISED because there are no labels.
+
+Q2. Explain K-Means.
+A. Partition data into K clusters: assign points to nearest centroid, update
+   centroids as means, repeat until stable.
+
+Q3. What is a centroid?
+A. The centre (mean) of all points in a cluster.
+
+Q4. What is WCSS / inertia?
+A. Sum of squared distances between each point and its cluster centroid.
+
+Q5. What is the elbow method?
+A. Plot WCSS against K and pick the K where the curve bends and further
+   increase in K gives only small gains.
+
+Q6. Why does WCSS always decrease when K increases?
+A. More centroids mean points are closer to their centroid; with K = n points,
+   WCSS = 0. So we look for the elbow, not the minimum.
+
+Q7. Why scale data before clustering?
+A. Distances are used; features with larger ranges would dominate.
+
+Q8. What is n_init in KMeans?
+A. How many times the algorithm runs with different initial centroids; the
+   best result (lowest inertia) is kept.
+
+Q9. What is k-means++?
+A. Smart initialization that picks initial centroids far from each other,
+   giving better and faster results. Default in sklearn.
+
+Q10. What is hierarchical clustering? Types?
+A. Builds a tree of clusters. Agglomerative = bottom-up (merge). Divisive =
+   top-down (split).
+
+Q11. What is a dendrogram?
+A. A tree diagram showing the order and distance at which clusters are merged.
+
+Q12. How to choose number of clusters from a dendrogram?
+A. Cut where the vertical lines are longest (largest distance jump) without
+   crossing any horizontal merge line.
+
+Q13. What is linkage? Name types.
+A. Rule to measure distance between clusters: single (min), complete (max),
+   average, ward (minimize variance).
+
+Q14. K-Means vs Hierarchical?
+A. K-Means: needs K in advance, fast, good for large data, spherical clusters.
+   Hierarchical: no K needed in advance, gives full tree, slow for large data
+   (O(n^2) or more).
+
+Q15. Disadvantages of K-Means?
+A. Must choose K, sensitive to outliers and initial centroids, assumes
+   spherical clusters of similar size.
+
+Q16. How else can you evaluate clusters?
+A. Silhouette score (-1 to 1, higher is better), Davies-Bouldin index.
+
+Q17. Why encoding="ISO-8859-1"?
+A. The CSV contains non-UTF-8 characters; this encoding avoids read errors.
+
+Q18. Why did you use only 100 points for the dendrogram?
+A. Plotting thousands of points makes the tree unreadable and slow.
+
+Q19. What does fit_predict do?
+A. Fits the model and returns the cluster label for each data point.
+
+Q20. What does value_counts do?
+A. Counts how many rows belong to each cluster.
+
+Q21. What distance metric is used?
+A. Euclidean distance.
+
+Q22. Applications of clustering?
+A. Customer segmentation, market basket analysis, image compression,
+   anomaly detection, document grouping.
+
+Q23. What will you do with the clusters in this sales data?
+A. Segment orders (e.g. small, medium, bulk high-value orders) to design
+   pricing, discounts and marketing for each group.
+
+Q24. What is the difference between classification and clustering?
+A. Classification uses known labels (supervised); clustering discovers groups
+   without labels (unsupervised).
+
+Q25. What is random_state=42?
+A. Fixes the random seed so results are the same every run.

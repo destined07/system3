@@ -1,0 +1,243 @@
+//Practical - 4 
+//Implement Gradient Descent Algorithm to find the local minima of a function. For example, find the local minima of the function y=(x+3)2 starting from the point x=2
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+
+def function(x):
+    return (x + 3) ** 2
+def gradient(x):
+    return 2 * (x + 3)
+x = 2
+learning_rate = 0.1
+history = [x]
+for i in range(100):
+    x = x - learning_rate * gradient(x)
+    history.append(x)
+print("Local Minimum at x =", round(x, 4))
+print("Minimum value of y =", round(function(x), 4))
+
+
+
+
+x_values = np.linspace(-7, 3, 100)
+y_values = function(x_values)
+
+
+
+plt.plot(x_values, y_values, label="y = (x+3)^2")
+plt.scatter(history, [function(i) for i in history],
+            color="red", label="Gradient Descent")
+plt.plot(history, [function(i) for i in history],
+         color="red", linestyle="--")
+
+
+
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.title("Gradient Descent Visualization")
+plt.legend()
+plt.grid()
+plt.show()
+
+
+
+
+
+
+
+
+==============================================================================
+PRACTICAL 4 : GRADIENT DESCENT ALGORITHM
+==============================================================================
+
+PROBLEM STATEMENT
+-----------------
+Implement the Gradient Descent algorithm to find the local minimum of a
+function. Example: find the local minimum of  y = (x + 3)^2  starting from
+the point x = 2.
+
+
+==============================================================================
+PART A : THEORY IN SIMPLE WORDS
+==============================================================================
+* Gradient Descent (GD) = an optimization algorithm that finds the minimum
+  of a function by repeatedly taking small steps DOWNHILL.
+* Gradient = slope (derivative) of the function at a point.
+  - Positive slope  -> function increasing -> move LEFT (decrease x).
+  - Negative slope  -> function decreasing -> move RIGHT (increase x).
+* Update rule:   x_new = x_old - learning_rate * gradient(x_old)
+* Learning rate (alpha) = size of each step.
+  - Too small -> very slow.
+  - Too large -> overshoots / may diverge.
+* Our function:  y = (x+3)^2
+  Derivative:    dy/dx = 2(x+3)
+  Minimum where derivative = 0  ->  x = -3, and y = 0.
+  So the answer we expect is x = -3, y = 0.
+* Real use: training ML models (linear regression, neural networks) uses GD
+  to minimize the loss function.
+
+
+==============================================================================
+PART B : ALGORITHM
+==============================================================================
+1. Define the function  f(x) = (x + 3)^2.
+2. Define its gradient  f'(x) = 2(x + 3).
+3. Initialize: starting point x = 2, learning rate = 0.1, number of
+   iterations = 100. Create a list 'history' to store every x.
+4. Repeat for each iteration:
+       a. Compute gradient at current x.
+       b. Update  x = x - learning_rate * gradient.
+       c. Save new x in history.
+5. After the loop, x is (approximately) the minimum point; compute f(x).
+6. Print x and f(x).
+7. Plot the curve y = (x+3)^2 and the path taken by gradient descent.
+
+Worked example (first steps):
+   Start x = 2        gradient = 2(5)    = 10    x = 2 - 0.1*10     = 1.0
+   x = 1.0            gradient = 2(4)    = 8     x = 1 - 0.8        = 0.2
+   x = 0.2            gradient = 2(3.2)  = 6.4   x = 0.2 - 0.64     = -0.44
+   ... each step the distance from -3 shrinks by factor 0.8,
+   so after 100 steps x is about -3.0000.
+
+
+==============================================================================
+PART C : LINE-BY-LINE CODE EXPLANATION
+==============================================================================
+
+import numpy as np
+   -> numpy used to create many x values for plotting (linspace).
+import matplotlib.pyplot as plt
+   -> for plotting the graph.
+
+def function(x):
+    return (x + 3) ** 2
+   -> the function we want to minimize, y = (x+3)^2. '**' means power.
+
+def gradient(x):
+    return 2 * (x + 3)
+   -> derivative of the function: d/dx (x+3)^2 = 2(x+3).
+
+x = 2
+   -> starting point of the search.
+learning_rate = 0.1
+   -> step size.
+history = [x]
+   -> list that stores all x values visited (starts with 2), used for plotting.
+
+for i in range(100):
+   -> repeat the update 100 times (100 iterations).
+    x = x - learning_rate * gradient(x)
+   -> THE GRADIENT DESCENT UPDATE. Move opposite to the slope.
+    history.append(x)
+   -> store the new x.
+
+print("Local Minimum at x =", round(x, 4))
+   -> prints final x rounded to 4 decimals -> -3.0
+print("Minimum value of y =", round(function(x), 4))
+   -> prints f(x) at that point -> 0.0
+
+---- Visualization ----
+x_values = np.linspace(-7, 3, 100)
+   -> 100 evenly spaced numbers between -7 and 3 (to draw the smooth curve).
+y_values = function(x_values)
+   -> y for every x_value (works on whole numpy array at once).
+
+plt.plot(x_values, y_values, label="y = (x+3)^2")
+   -> draws the parabola.
+plt.scatter(history, [function(i) for i in history], color="red", label="Gradient Descent")
+   -> red dots: each visited x and its y value.
+plt.plot(history, [function(i) for i in history], color="red", linestyle="--")
+   -> dashed red line joining the dots, showing the downhill path.
+plt.xlabel("X"); plt.ylabel("Y"); plt.title("Gradient Descent Visualization")
+   -> labels and title.
+plt.legend()
+   -> shows the label box.
+plt.grid()
+   -> background grid.
+plt.show()
+   -> displays the graph. You will see dots starting at x=2 and sliding down
+      into the bottom of the parabola at x=-3.
+
+
+==============================================================================
+PART D : EXPECTED VIVA QUESTIONS AND ANSWERS
+==============================================================================
+
+Q1. What is gradient descent?
+A. An iterative optimization algorithm that moves in the direction opposite
+   to the gradient to minimize a function.
+
+Q2. What is a gradient?
+A. The vector of partial derivatives; for one variable, simply the slope
+   (derivative).
+
+Q3. Why subtract the gradient?
+A. The gradient points toward the steepest INCREASE; subtracting moves toward
+   the steepest DECREASE.
+
+Q4. What is the learning rate? What if it is too high or too low?
+A. Step size. Too high -> overshoot or diverge. Too low -> slow convergence.
+
+Q5. What is the derivative of (x+3)^2?
+A. 2(x+3).
+
+Q6. What is the minimum of the function and how do you verify?
+A. At x = -3, y = 0. Set derivative 2(x+3) = 0 -> x = -3. Second derivative is
+   2 > 0, so it is a minimum.
+
+Q7. What is local minimum vs global minimum?
+A. Local = lowest in a neighbourhood; global = lowest over the entire domain.
+   This function is convex, so its local minimum is also the global minimum.
+
+Q8. What is a convex function?
+A. A function shaped like a bowl; any local minimum is the global minimum.
+   GD is guaranteed to converge (with a suitable learning rate).
+
+Q9. How do you decide when to stop?
+A. After fixed iterations, or when |gradient| or the change in x is below a
+   small tolerance (e.g. 1e-6).
+
+Q10. What happens if learning_rate = 1.0 here?
+A. x_new = x - 2(x+3) = -x - 6, so x just oscillates between two values and
+    never converges. With rate > 1 it diverges.
+
+Q11. What is the update formula?
+A. x_new = x_old - alpha * f'(x_old).
+
+Q12. Types of gradient descent?
+A. Batch GD (all data), Stochastic GD (one sample), Mini-batch GD (small
+   groups).
+
+Q13. Advantages and disadvantages?
+A. Simple and works for large models. But needs a good learning rate, can get
+   stuck in local minima/saddle points for non-convex functions, may be slow.
+
+Q14. Where is GD used in machine learning?
+A. Minimizing loss in linear/logistic regression and neural networks
+   (back-propagation uses it).
+
+Q15. What are variants/improvements of GD?
+A. Momentum, RMSProp, Adagrad, Adam.
+
+Q16. What is a saddle point?
+A. A point where gradient is zero but it is neither a minimum nor maximum.
+
+Q17. What is np.linspace?
+A. Creates a given number of evenly spaced values between two numbers.
+
+Q18. How would you find a maximum instead?
+A. Gradient ASCENT: x = x + alpha * gradient.
+
+Q19. What is the number of iterations here and why 100?
+A. 100; enough for x to reach about -3.0000. Error shrinks by factor 0.8
+   each step: 5 * 0.8^100 is almost 0.
+
+Q20. How does GD apply to many variables?
+A. Update every parameter with its own partial derivative:
+   w = w - alpha * dL/dw.
+

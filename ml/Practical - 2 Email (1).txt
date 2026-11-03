@@ -1,0 +1,350 @@
+Practical - 2 :
+Classify the email using the binary classification method.
+ Email Spam detection has two states:
+ a) Normal State - Not Spam, b) Abnormal State Spam. Use K-Nearest Neighbors and Support Vector Machine for classification. Analyze their performance.
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.preprocessing import StandardScaler
+
+
+df = pd.read_csv("emails.csv")
+
+
+df.head()
+
+
+
+df = df.drop("Email No.", axis=1)
+
+
+
+df = df.dropna()
+
+
+X = df.drop("Prediction", axis=1)
+y = df["Prediction"]
+
+
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
+
+
+
+
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+
+
+
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+knn_pred = knn.predict(X_test)
+
+
+
+svm = SVC(kernel="linear")
+svm.fit(X_train, y_train)
+svm_pred = svm.predict(X_test)
+
+
+
+print("KNN Accuracy:", accuracy_score(y_test, knn_pred))
+print("KNN Confusion Matrix:\n", confusion_matrix(y_test, knn_pred))
+print(classification_report(y_test, knn_pred))
+
+
+
+print("SVM Accuracy:", accuracy_score(y_test, svm_pred))
+print("SVM Confusion Matrix:\n", confusion_matrix(y_test, svm_pred))
+print(classification_report(y_test, svm_pred))
+
+
+
+if accuracy_score(y_test, knn_pred) > accuracy_score(y_test, svm_pred):
+    print("KNN performs better")
+else:
+    print("SVM performs better ")
+
+
+
+
+
+==============================================================================
+PRACTICAL 2 : EMAIL SPAM DETECTION USING KNN AND SVM
+==============================================================================
+
+PROBLEM STATEMENT
+-----------------
+Classify emails using binary classification.
+  Normal state   (0) = Not Spam
+  Abnormal state (1) = Spam
+Use K-Nearest Neighbors (KNN) and Support Vector Machine (SVM) and analyze
+their performance.
+
+
+==============================================================================
+PART A : THEORY IN SIMPLE WORDS
+==============================================================================
+* Classification = predicting a CATEGORY (spam / not spam).
+* Binary classification = only two classes.
+* Dataset (emails.csv): each row = one email. Columns = counts of common
+  words (the, to, ect, ...), plus 'Email No.' and 'Prediction' (0 or 1).
+* KNN: to classify a new email, find the K closest emails in the training set
+  (using distance) and take a MAJORITY VOTE of their labels. No real
+  "training" - it just stores data (lazy learner).
+* SVM: finds the best separating line/hyperplane between two classes that has
+  the MAXIMUM MARGIN (largest gap) between the nearest points of each class.
+  Those nearest points are called support vectors.
+* Linear kernel = straight-line (hyperplane) separation. Works very well for
+  text data with many features.
+* Scaling: KNN and SVM use distances, so all features must be on the same
+  scale -> StandardScaler (mean 0, std 1).
+
+
+==============================================================================
+PART B : ALGORITHM
+==============================================================================
+Common steps
+1. Import libraries.
+2. Load emails.csv.
+3. Drop 'Email No.' (just an identifier) and remove missing rows.
+4. Separate X (word-count features) and y (Prediction: 0/1).
+5. Split into train (80%) and test (20%).
+6. Standardize: fit scaler on train, transform both train and test.
+
+KNN algorithm
+1. Choose K (here 5).
+2. For a test email, calculate distance (Euclidean) to every training email.
+3. Pick the K nearest emails.
+4. Majority class among them = predicted class.
+
+SVM algorithm
+1. Choose kernel (linear).
+2. Find the hyperplane w.x + b = 0 that separates spam and not-spam with
+   maximum margin (using support vectors).
+3. New email: if w.x + b > 0 -> spam, else -> not spam.
+
+Evaluation
+7. Predict on test data for both models.
+8. Compute accuracy, confusion matrix, precision, recall, F1-score.
+9. Compare accuracies and declare the better model.
+
+==============================================================================
+PART C : LINE-BY-LINE CODE EXPLANATION
+==============================================================================
+
+import pandas as pd
+   -> pandas is used to read the CSV file and work with tables (DataFrames).
+
+from sklearn.model_selection import train_test_split
+   -> splits the data into training part and testing part.
+
+from sklearn.neighbors import KNeighborsClassifier
+   -> gives us the KNN model.
+
+from sklearn.svm import SVC
+   -> gives us the SVM model (SVC = Support Vector Classifier).
+
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+   -> tools to check how good the models are.
+
+from sklearn.preprocessing import StandardScaler
+   -> brings all columns to the same scale (mean 0, std 1).
+
+
+df = pd.read_csv("emails.csv")
+   -> reads the dataset file into a table called df.
+
+df.head()
+   -> shows the first 5 rows of the table, to see what the data looks like.
+      (It shows output automatically in Jupyter/Colab. In a normal Python
+      script you must write print(df.head()).)
+
+
+df = df.drop("Email No.", axis=1)
+   -> deletes the "Email No." column. It is only an ID, so it does not help
+      in learning. (axis=1 means column.)
+
+df = df.dropna()
+   -> deletes any row that has a missing value.
+
+
+X = df.drop("Prediction", axis=1)
+   -> X = input = all word-count columns (everything except Prediction).
+
+y = df["Prediction"]
+   -> y = output = the answer column (0 = Not Spam, 1 = Spam).
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+   -> 80% data for training, 20% for testing (test_size=0.2).
+      random_state=42 gives the same split every time we run.
+
+
+sc = StandardScaler()
+   -> creates the scaler.
+
+X_train = sc.fit_transform(X_train)
+   -> fit = learns mean and std from TRAIN data, transform = applies scaling.
+
+X_test = sc.transform(X_test)
+   -> scales TEST data using the SAME mean and std from train.
+      We do not fit on test data, because that would be data leakage.
+
+
+knn = KNeighborsClassifier(n_neighbors=5)
+   -> creates a KNN model with K=5 (5 nearest emails will vote).
+
+knn.fit(X_train, y_train)
+   -> KNN just stores the training data (it is a lazy learner).
+
+knn_pred = knn.predict(X_test)
+   -> for each test email, finds its 5 nearest emails and takes the majority
+      label as the prediction.
+
+
+svm = SVC(kernel="linear")
+   -> creates an SVM model that separates the classes with a straight line
+      (linear kernel).
+
+svm.fit(X_train, y_train)
+   -> finds the best separating line with maximum margin.
+
+svm_pred = svm.predict(X_test)
+   -> predicts spam / not spam for each test email.
+
+
+print("KNN Accuracy:", accuracy_score(y_test, knn_pred))
+   -> prints accuracy = correct predictions / total predictions.
+
+print("KNN Confusion Matrix:\n", confusion_matrix(y_test, knn_pred))
+   -> prints a 2x2 table of right and wrong predictions:
+                    Predicted 0 | Predicted 1
+        Actual 0 :     TN       |     FP
+        Actual 1 :     FN       |     TP
+
+print(classification_report(y_test, knn_pred))
+   -> prints precision, recall, f1-score and support for each class.
+
+
+print("SVM Accuracy:", accuracy_score(y_test, svm_pred))
+print("SVM Confusion Matrix:\n", confusion_matrix(y_test, svm_pred))
+print(classification_report(y_test, svm_pred))
+   -> same three outputs as above, but for the SVM model.
+
+
+if accuracy_score(y_test, knn_pred) > accuracy_score(y_test, svm_pred):
+    print("KNN performs better")
+else:
+    print("SVM performs better ")
+   -> compares the two accuracies and prints the winner.
+      (Note: if both are equal, it prints SVM because of the else.)
+
+Typical result: SVM (linear) gives higher accuracy than KNN on this dataset,
+because text data is high-dimensional and mostly linearly separable, while
+KNN suffers from the "curse of dimensionality" and is slower.
+
+==============================================================================
+PART D : EXPECTED VIVA QUESTIONS AND ANSWERS
+==============================================================================
+
+Q1. What is classification? How is it different from regression?
+A. Classification predicts a category; regression predicts a continuous value.
+
+Q2. What is binary classification?
+A. Classification with exactly two classes (spam / not spam).
+
+Q3. Explain KNN.
+A. Instance-based algorithm that classifies a point by the majority class of
+   its K nearest training points.
+
+Q4. Why is KNN called a lazy learner?
+A. It does no training; it just memorizes data and does all the work at
+   prediction time.
+
+Q5. What distance does KNN use?
+A. Usually Euclidean. Others: Manhattan, Minkowski, Hamming.
+
+Q6. How do you choose K?
+A. Try several values using cross-validation. Small K = noisy / overfit.
+   Large K = too smooth / underfit. Use odd K for binary problems to avoid ties.
+
+Q7. Explain SVM.
+A. Finds the hyperplane that separates classes with the maximum margin.
+
+Q8. What are support vectors?
+A. Training points closest to the hyperplane; they alone define the boundary.
+
+Q9. What is margin?
+A. Distance between the hyperplane and the nearest points of each class.
+
+Q10. What is a kernel? Name some.
+A. A function that lets SVM separate non-linear data by mapping to a higher
+    dimension. Linear, polynomial, RBF, sigmoid.
+
+Q11. What is the C parameter in SVM?
+A. Controls trade-off between wide margin and misclassification. Large C =
+    less tolerance for errors (may overfit); small C = more tolerance.
+
+Q12. Why scale features?
+A. KNN and SVM are distance-based; larger-valued features would dominate.
+
+Q13. Why fit scaler only on train data?
+A. To avoid data leakage from test data.
+
+Q14. What is a confusion matrix?
+A. Table of TP, TN, FP, FN showing where the model is right/wrong.
+
+Q15. Define TP, TN, FP, FN in spam context.
+A. TP = spam correctly detected. TN = normal mail correctly passed.
+   FP = normal mail wrongly marked spam (bad: important mail lost).
+   FN = spam that reached inbox.
+
+Q16. Define accuracy, precision, recall, F1.
+A. Accuracy = (TP+TN)/total. Precision = TP/(TP+FP). Recall = TP/(TP+FN).
+   F1 = 2*P*R/(P+R).
+
+Q17. For spam detection which metric matters most?
+A. Precision (avoid marking real mail as spam), but F1 gives a balance.
+
+Q18. Why not rely on accuracy alone?
+A. With imbalanced classes a model can have high accuracy while missing the
+    minority class.
+
+Q19. Which model is better here and why?
+A. Usually SVM: high-dimensional sparse text data is often linearly separable;
+   SVM is also faster at prediction than KNN.
+
+Q20. What is the curse of dimensionality?
+A. In very high dimensions distances become similar for all points, so
+   distance-based methods like KNN lose accuracy.
+
+Q21. Disadvantages of KNN?
+A. Slow prediction, high memory use, sensitive to scaling and irrelevant features.
+
+Q22. Disadvantages of SVM?
+A. Slow on very large datasets, kernel/parameter choice is tricky, no direct
+    probability output.
+
+Q23. What does random_state do?
+A. Fixes random seed for a reproducible split.
+
+Q24. What is the Naive Bayes alternative?
+A. Probabilistic classifier very commonly used for spam, based on word
+   probabilities and Bayes theorem.
+
+Q25. How can you improve the results?
+A. Hyperparameter tuning (GridSearchCV), TF-IDF features, cross-validation,
+   feature selection.
+
+Q26. What is supervised learning?
+A. Learning from labelled data (each email has a known label 0/1).
+
